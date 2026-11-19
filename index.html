@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Day in My Life · Interactive Lesson</title>
+<style>
+:root {
+--primary: #7c3aed;
+--secondary: #06b6d4;
+--success: #10b981;
+--error: #ef4444;
+--glass-bg: rgba(15, 23, 42, 0.55);
+--glass-border: rgba(255, 255, 255, 0.25);
+--text-main: #ffffff;
+--text-muted: rgba(255, 255, 255, 0.85);
+--panel-width: 66%;
+--font-base: 22px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+overflow: hidden;
+background: #0f172a;
+color: var(--text-main);
+height: 100vh;
+width: 100vw;
+font-size: var(--font-base);
+line-height: 1.4;
+}
+
+/* ===== ВИДЕО СЛОИ ===== */
+.video-layer {
+position: absolute;
+top: 0; left: 0;
+width: 100%; height: 100%;
+object-fit: cover;
+object-position: right center;
+z-index: 1;
+opacity: 0;
+transition: opacity 0.5s ease;
+pointer-events: none;
+}
+.video-layer.active { opacity: 1; }
+#videoWelcome { z-index: 1; }
+#videoSuccess { z-index: 2; }
+#videoOops { z-index: 2; }
+
+/* ===== ИНТЕРФЕЙСНЫЙ ОВЕРЛЕЙ ===== */
+.ui-overlay {
+position: absolute;
+top: 0; left: 0;
+width: 100%; height: 100%;
+z-index: 10;
+display: flex;
+flex-direction: column;
+pointer-events: none;
+}
+
+/* Верхняя панель */
+.top-bar {
+padding: 20px 30px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+pointer-events: auto;
+background: linear-gradient(to bottom, rgba(15,23,42,0.8), transparent);
+}
+.lesson-title {
+font-size: 1.8rem;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 2px;
+background: linear-gradient(90deg, var(--secondary), var(--primary));
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+filter: drop-shadow(0 0 10px rgba(124, 58, 237, 0.5));
+}
+.btn-restart {
+background: rgba(255, 255, 255, 0.15);
+border: 1px solid var(--glass-border);
+color: white;
+padding: 12px 22px;
+border-radius: 24px;
+cursor: pointer;
+font-weight: 600;
+font-size: 1.1rem;
+transition: all 0.3s;
+backdrop-filter: blur(5px);
+}
+.btn-restart:hover {
+background: rgba(239, 68, 68, 0.4);
+border-color: var(--error);
+transform: scale(1.05);
+}
+
+/* Основная игровая зона */
+.game-area {
+flex: 1;
+display: flex;
+align-items: flex-end;
+padding: 20px;
+pointer-events: none;
+}
+
+/* Панель заданий */
+.game-panel {
+width: var(--panel-width);
+background: var(--glass-bg);
+backdrop-filter: blur(18px);
+-webkit-backdrop-filter: blur(18px);
+border: 1px solid var(--glass-border);
+border-radius: 28px;
+padding: 30px;
+box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+pointer-events: auto;
+display: flex;
+flex-direction: column;
+gap: 20px;
+max-height: 80vh;
+overflow-y: auto;
+animation: slideInLeft 0.5s ease-out;
+}
+.game-panel::-webkit-scrollbar { width: 10px; }
+.game-panel::-webkit-scrollbar-thumb {
+background: var(--primary);
+border-radius: 5px;
+}
+@keyframes slideInLeft {
+from { transform: translateX(-100%); opacity: 0; }
+to { transform: translateX(0); opacity: 1; }
+}
+
+/* Меню выбора заданий */
+.task-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+gap: 16px;
+}
+.task-tile {
+background: rgba(255, 255, 255, 0.08);
+border: 1px solid rgba(255, 255, 255, 0.15);
+border-radius: 20px;
+padding: 22px 14px;
+text-align: center;
+cursor: pointer;
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 10px;
+}
+.task-tile:hover {
+background: rgba(124, 58, 237, 0.25);
+border-color: var(--primary);
+transform: translateY(-5px);
+box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+}
+.task-icon { font-size: 3rem; }
+.task-name { font-size: 1.25rem; font-weight: 600; line-height: 1.2; }
+
+/* Экраны заданий */
+.screen { display: none; }
+.screen.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+.screen-header {
+font-size: 2rem;
+font-weight: 700;
+margin-bottom: 18px;
+color: var(--secondary);
+text-transform: uppercase;
+letter-spacing: 1.5px;
+}
+.content-box {
+background: rgba(0, 0, 0, 0.3);
+border-radius: 16px;
+padding: 22px;
+margin-bottom: 18px;
+min-height: 120px;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+text-align: center;
+}
+
+/* Часы для задания 1 */
+.clock-display {
+width: 200px;
+height: 200px;
+border: 5px solid var(--glass-border);
+border-radius: 50%;
+position: relative;
+margin-bottom: 18px;
+background: rgba(255,255,255,0.08);
+}
+.clock-number {
+position: absolute;
+font-size: 1.3rem;
+font-weight: 700;
+color: white;
+text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.clock-tick {
+position: absolute;
+width: 2px;
+height: 10px;
+background: rgba(255,255,255,0.5);
+top: 5px;
+left: 50%;
+transform-origin: bottom center;
+}
+.clock-tick.major {
+width: 3px;
+height: 15px;
+background: rgba(255,255,255,0.8);
+}
+.clock-hand {
+position: absolute;
+bottom: 50%;
+left: 50%;
+transform-origin: bottom center;
+background: white;
+border-radius: 4px;
+}
+.hand-hour { width: 6px; height: 55px; background: var(--secondary); }
+.hand-min { width: 3px; height: 80px; background: var(--primary); }
+.clock-center {
+position: absolute;
+top: 50%; left: 50%;
+transform: translate(-50%, -50%);
+width: 12px; height: 12px;
+background: white;
+border-radius: 50%;
+z-index: 2;
+}
+.time-sentence {
+font-size: 1.75rem;
+font-weight: 700;
+margin-top: 12px;
+text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.correct-answer {
+font-size: 1.5rem;
+font-weight: 600;
+color: var(--success);
+margin-top: 10px;
+animation: fadeIn 0.5s ease;
+}
+
+/* Кнопки действий */
+.action-buttons {
+display: flex;
+gap: 14px;
+justify-content: center;
+margin-top: 12px;
+}
+.btn {
+padding: 14px 28px;
+border-radius: 14px;
+border: none;
+font-weight: 700;
+cursor: pointer;
+transition: all 0.2s;
+text-transform: uppercase;
+font-size: 1.15rem;
+letter-spacing: 0.5px;
+}
+.btn-primary {
+background: linear-gradient(135deg, var(--primary), #5b21b6);
+color: white;
+box-shadow: 0 4px 15px rgba(124, 58, 237, 0.5);
+}
+.btn-primary:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 6px 20px rgba(124, 58, 237, 0.7); }
+.btn-success { background: var(--success); color: white; }
+.btn-error { background: var(--error); color: white; }
+.btn-outline {
+background: transparent;
+border: 1px solid var(--glass-border);
+color: white;
+}
+.btn-outline:hover { background: rgba(255,255,255,0.15); }
+.btn:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+transform: none !important;
+box-shadow: none !important;
+}
+.btn-back {
+margin-top: 18px;
+width: 100%;
+padding: 14px;
+background: rgba(255, 255, 255, 0.12);
+color: var(--text-muted);
+border: 1px solid rgba(255, 255, 255, 0.25);
+font-size: 1.1rem;
+}
+.btn-back:hover { background: rgba(255, 255, 255, 0.25); color: white; }
+
+/* Задание 2: Список утверждений */
+.statement-item {
+display: flex;
+align-items: center;
+justify-content: space-between;
+background: rgba(255, 255, 255, 0.08);
+padding: 14px 18px;
+border-radius: 12px;
+margin-bottom: 10px;
+border-left: 4px solid transparent;
+transition: all 0.3s;
+gap: 15px;
+}
+.statement-text { font-size: 1.35rem; flex: 1; font-weight: 500; }
+.answer-btns { display: flex; gap: 10px; }
+.btn-check-icon {
+width: 48px; height: 48px;
+border-radius: 50%;
+display: flex; align-items: center; justify-content: center;
+font-size: 1.6rem;
+cursor: pointer;
+transition: all 0.2s;
+border: 1px solid rgba(255,255,255,0.25);
+background: rgba(255,255,255,0.1);
+}
+.btn-check-icon:hover { transform: scale(1.1); }
+.btn-check-icon.correct-active { background: var(--success); border-color: var(--success); color: white; }
+.btn-check-icon.wrong-active { background: var(--error); border-color: var(--error); color: white; }
+
+/* Задание 3: Reading - ПОЛНОЭКРАННОЕ */
+.reading-fullscreen {
+position: fixed;
+top: 0; left: 0;
+width: 100vw; height: 100vh;
+background: rgba(15, 23, 42, 0.95);
+backdrop-filter: blur(20px);
+z-index: 1000;
+display: none;
+flex-direction: column;
+padding: 40px;
+overflow-y: auto;
+}
+.reading-fullscreen.active {
+display: flex;
+animation: fadeIn 0.3s ease;
+}
+.reading-close-btn {
+position: absolute;
+top: 20px;
+right: 20px;
+width: 50px;
+height: 50px;
+border-radius: 50%;
+background: rgba(255,255,255,0.15);
+border: 1px solid var(--glass-border);
+color: white;
+font-size: 1.5rem;
+cursor: pointer;
+transition: all 0.3s;
+}
+.reading-close-btn:hover {
+background: var(--error);
+transform: scale(1.1);
+}
+.reading-text {
+font-size: 1.8rem;
+line-height: 2;
+text-align: left;
+max-width: 900px;
+margin: 0 auto;
+padding: 20px;
+}
+.time-chip {
+background: rgba(6, 182, 212, 0.25);
+border: 2px solid var(--secondary);
+color: var(--secondary);
+padding: 4px 10px;
+border-radius: 10px;
+cursor: pointer;
+font-weight: bold;
+transition: all 0.2s;
+position: relative;
+display: inline-block;
+}
+.time-chip:hover {
+background: rgba(6, 182, 212, 0.4);
+transform: scale(1.05);
+}
+.time-chip.revealed {
+background: #1e3a8a; /* ТЁМНО-СИНИЙ */
+color: white;
+border-color: #1e3a8a;
+}
+.time-label {
+display: none;
+margin-top: 8px;
+font-size: 1.3rem;
+color: white;
+font-weight: 600;
+animation: fadeIn 0.3s ease;
+}
+.time-chip.revealed .time-label {
+display: block;
+}
+
+/* Задание 4: True/False */
+.tf-question {
+font-size: 1.75rem;
+font-weight: 600;
+margin-bottom: 24px;
+text-align: center;
+min-height: 80px;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 0 10px;
+}
+.tf-options {
+display: flex;
+gap: 24px;
+justify-content: center;
+}
+.btn-tf {
+flex: 1;
+padding: 22px;
+font-size: 1.5rem;
+font-weight: 700;
+border-radius: 14px;
+border: 2px solid transparent;
+background: rgba(255,255,255,0.12);
+color: white;
+cursor: pointer;
+transition: all 0.2s;
+text-transform: uppercase;
+}
+.btn-tf:hover:not(:disabled) { background: rgba(255,255,255,0.25); }
+.btn-tf.selected-correct { background: var(--success); border-color: #fff; transform: scale(1.05); }
+.btn-tf.selected-wrong { background: var(--error); border-color: #fff; transform: scale(1.05); }
+
+/* Задание 5: Now I Know - ПОЛНОЭКРАННОЕ */
+.nowiknow-fullscreen {
+position: fixed;
+top: 0; left: 0;
+width: 100vw; height: 100vh;
+background: rgba(15, 23, 42, 0.95);
+backdrop-filter: blur(20px);
+z-index: 1000;
+display: none;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+padding: 40px;
+}
+.nowiknow-fullscreen.active {
+display: flex;
+animation: fadeIn 0.3s ease;
+}
+.nowiknow-close-btn {
+position: absolute;
+top: 20px;
+right: 20px;
+width: 50px;
+height: 50px;
+border-radius: 50%;
+background: rgba(255,255,255,0.15);
+border: 1px solid var(--glass-border);
+color: white;
+font-size: 1.5rem;
+cursor: pointer;
+transition: all 0.3s;
+}
+.nowiknow-close-btn:hover {
+background: var(--error);
+transform: scale(1.1);
+}
+.nowiknow-content {
+max-width: 1000px;
+width: 100%;
+text-align: center;
+}
+.nowiknow-statement {
+background: rgba(239, 68, 68, 0.2);
+border: 2px solid var(--error);
+border-radius: 20px;
+padding: 25px;
+margin-bottom: 30px;
+font-size: 2rem;
+font-weight: 700;
+color: white;
+}
+.nowiknow-example {
+background: rgba(124, 58, 237, 0.2);
+border: 2px solid var(--primary);
+border-radius: 20px;
+padding: 30px;
+margin-bottom: 40px;
+font-size: 1.8rem;
+font-style: italic;
+line-height: 1.6;
+}
+.nowiknow-template {
+background: rgba(6, 182, 212, 0.15);
+border: 2px solid var(--secondary);
+border-radius: 20px;
+padding: 30px;
+font-size: 1.8rem;
+line-height: 1.8;
+}
+
+/* Финальный экран */
+.congrats-screen {
+text-align: center;
+padding: 20px;
+}
+.trophy-icon { font-size: 5rem; margin-bottom: 18px; animation: bounce 2s infinite; }
+@keyframes bounce {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-25px); }
+}
+.congrats-title {
+font-size: 3rem;
+font-weight: 800;
+background: linear-gradient(90deg, #fbbf24, #f59e0b);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+margin-bottom: 12px;
+}
+.congrats-screen p { font-size: 1.3rem; }
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+:root { --panel-width: 85%; --font-base: 20px; }
+.game-panel { padding: 24px; }
+}
+@media (max-width: 768px) {
+:root { --panel-width: 100%; --font-base: 18px; }
+.game-panel {
+width: 100%;
+border-radius: 24px 24px 0 0;
+padding: 20px;
+max-height: 75vh;
+}
+.game-area { align-items: flex-end; }
+.top-bar { padding: 15px; }
+.lesson-title { font-size: 1.3rem; }
+.screen-header { font-size: 1.5rem; }
+.clock-display { width: 150px; height: 150px; }
+.hand-hour { height: 40px; }
+.hand-min { height: 60px; }
+.time-sentence { font-size: 1.3rem; }
+.tf-question { font-size: 1.3rem; }
+.btn-tf { font-size: 1.2rem; padding: 16px; }
+.reading-text { font-size: 1.4rem; line-height: 1.8; }
+.nowiknow-example, .nowiknow-template { font-size: 1.4rem; }
+.nowiknow-statement { font-size: 1.5rem; }
+}
+</style>
+</head>
+<body>
+<!-- Видеослои -->
+<video id="videoWelcome" class="video-layer active" autoplay muted loop playsinline src="Hello.mp4"></video>
+<video id="videoSuccess" class="video-layer" muted playsinline src="Hooray.mp4"></video>
+<video id="videoOops" class="video-layer" muted playsinline src="Oops.mp4"></video>
+
+<!-- Интерфейс -->
+<div class="ui-overlay">
+<header class="top-bar">
+<div class="lesson-title">English · A Day In My Life</div>
+<button class="btn-restart" onclick="restartGame()">🔄 Restart</button>
+</header>
+<main class="game-area">
+<div class="game-panel">
+<!-- ГЛАВНОЕ МЕНЮ -->
+<div id="screen-menu" class="screen active">
+<div class="screen-header">Select Task</div>
+<div class="task-grid">
+<div class="task-tile" onclick="openTask('takeoff')">
+<span class="task-icon">🕒</span>
+<span class="task-name">Take Off-Touch Down</span>
+</div>
+<div class="task-tile" onclick="openTask('arguide')">
+<span class="task-icon">🤖</span>
+<span class="task-name">AR-Guide</span>
+</div>
+<div class="task-tile" onclick="openTask('reading')">
+<span class="task-icon">📖</span>
+<span class="task-name">Reading</span>
+</div>
+<div class="task-tile" onclick="openTask('truefalse')">
+<span class="task-icon">✅</span>
+<span class="task-name">True or False</span>
+</div>
+<div class="task-tile" onclick="openTask('nowiknow')">
+<span class="task-icon">💡</span>
+<span class="task-name">Now I Know</span>
+</div>
+</div>
+</div>
+
+<!-- ЗАДАНИЕ 1: TAKE OFF-TOUCH DOWN -->
+<div id="screen-takeoff" class="screen">
+<div class="screen-header">Step <span id="to-step">1</span>/5</div>
+<div class="content-box">
+<div class="clock-display" id="to-clock">
+<div class="clock-hand hand-hour" id="to-hand-h"></div>
+<div class="clock-hand hand-min" id="to-hand-m"></div>
+<div class="clock-center"></div>
+</div>
+<div class="time-sentence" id="to-sentence">It's three o'clock.</div>
+<div class="correct-answer" id="to-correct-answer"></div>
+</div>
+<div class="action-buttons">
+<button class="btn btn-primary" id="to-check-btn" onclick="checkTakeOff()">Check</button>
+<button class="btn btn-outline" id="to-next-btn" onclick="nextTakeOff()" disabled>Next</button>
+</div>
+<button class="btn btn-back" onclick="goToMenu()">← Back to Menu</button>
+</div>
+
+<!-- ЗАДАНИЕ 2: AR-GUIDE -->
+<div id="screen-arguide" class="screen">
+<div class="screen-header">Predict the Text</div>
+<div id="ag-list"></div>
+<button class="btn btn-back" onclick="goToMenu()">← Back to Menu</button>
+</div>
+
+<!-- ЗАДАНИЕ 3: READING (кнопка для открытия) -->
+<div id="screen-reading" class="screen">
+<div class="screen-header">Read & Discover</div>
+<div class="content-box">
+<p style="font-size: 1.3rem;">Click the button below to read the text in fullscreen mode.</p>
+</div>
+<button class="btn btn-primary" style="width: 100%;" onclick="openReadingFullscreen()">📖 Open Reading Text</button>
+<button class="btn btn-back" onclick="goToMenu()">← Back to Menu</button>
+</div>
+
+<!-- ЗАДАНИЕ 4: TRUE OR FALSE -->
+<div id="screen-truefalse" class="screen">
+<div class="screen-header">Question <span id="tf-count">1</span>/6</div>
+<div class="content-box">
+<div class="tf-question" id="tf-question-text">Loading...</div>
+</div>
+<div class="tf-options">
+<button class="btn-tf" id="tf-btn-true" onclick="answerTF(true)">TRUE</button>
+<button class="btn-tf" id="tf-btn-false" onclick="answerTF(false)">FALSE</button>
+</div>
+<button class="btn btn-back" onclick="goToMenu()">← Back to Menu</button>
+</div>
+
+<!-- ЗАДАНИЕ 5: NOW I KNOW (кнопка для открытия) -->
+<div id="screen-nowiknow" class="screen">
+<div class="screen-header">Reflection</div>
+<div class="content-box">
+<p style="font-size: 1.3rem;">Click the button below to see the example and template.</p>
+</div>
+<button class="btn btn-primary" style="width: 100%;" onclick="openNowIKnowFullscreen()">💡 Show Example & Template</button>
+<button class="btn btn-back" onclick="goToMenu()">← Back to Menu</button>
+</div>
+
+<!-- ФИНАЛ -->
+<div id="screen-congrats" class="screen">
+<div class="congrats-screen">
+<div class="trophy-icon">🏆</div>
+<h2 class="congrats-title">CONGRATULATIONS!</h2>
+<p>You completed the lesson!</p>
+<button class="btn btn-primary" style="margin-top: 24px;" onclick="restartGame()">Play Again</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<!-- ПОЛНОЭКРАННЫЙ READING -->
+<div id="reading-fullscreen" class="reading-fullscreen">
+<button class="reading-close-btn" onclick="closeReadingFullscreen()">✕</button>
+<div class="reading-text" id="rd-text"></div>
+</div>
+
+<!-- ПОЛНОЭКРАННЫЙ NOW I KNOW -->
+<div id="nowiknow-fullscreen" class="nowiknow-fullscreen">
+<button class="nowiknow-close-btn" onclick="closeNowIKnowFullscreen()">✕</button>
+<div class="nowiknow-content">
+<div class="nowiknow-statement">
+Danielle lives in London
+</div>
+<div class="nowiknow-example">
+<strong>Example:</strong><br>
+"I used to think that Danielle lives in London, now I know that Danielle lives in Wisconsin."
+</div>
+<div class="nowiknow-template">
+<strong>Your Turn:</strong><br>
+"I used to think that ___________, now I know that ___________."
+</div>
+<button class="btn btn-primary" style="margin-top: 30px; padding: 18px 40px; font-size: 1.3rem;" onclick="finishLesson()">Finish Lesson 🏆</button>
+</div>
+</div>
+
+<script>
+// ===== СОСТОЯНИЕ ИГРЫ =====
+let isLocked = false;
+let currentVideoTimer = null;
+
+const takeOffData = [
+{ time: "3:00", text: "It's three o'clock.", answer: "It's three o'clock." },
+{ time: "4:30", text: "It's quarter past four.", answer: "It's half past four." },
+{ time: "7:15", text: "It's quarter past seven.", answer: "It's quarter past seven." },
+{ time: "8:45", text: "It's quarter past nine.", answer: "It's quarter to nine." },
+{ time: "10:00", text: "It's ten o'clock.", answer: "It's ten o'clock." }
+];
+let toIndex = 0;
+
+const arGuideData = [
+{ text: "Danielle's school starts at nine o'clock.", answer: false },
+{ text: "Students have a break at eleven o'clock.", answer: false },
+{ text: "Danielle has lunch at quarter past twelve.", answer: true },
+{ text: "Danielle goes home at four o'clock.", answer: false },
+{ text: "Danielle goes to bed at nine o'clock.", answer: false }
+];
+
+const tfData = [
+{ q: "Danielle lives in London.", a: false },
+{ q: "Danielle's school starts at 8:00.", a: false },
+{ q: "Danielle has a break at 11:30.", a: false },
+{ q: "She usually has lunch in the school canteen.", a: true },
+{ q: "Danielle plays with her little brother after school.", a: false },
+{ q: "She does her homework after dinner.", a: true }
+];
+let tfIndex = 0;
+
+// ===== УПРАВЛЕНИЕ ВИДЕО =====
+const vWelcome = document.getElementById('videoWelcome');
+const vSuccess = document.getElementById('videoSuccess');
+const vOops = document.getElementById('videoOops');
+
+function playReaction(type) {
+if (type === 'none') return;
+isLocked = true;
+const targetVideo = type === 'success' ? vSuccess : vOops;
+const otherVideo = type === 'success' ? vOops : vSuccess;
+otherVideo.classList.remove('active');
+otherVideo.pause();
+otherVideo.muted = true;
+targetVideo.currentTime = 0;
+targetVideo.muted = false;
+targetVideo.play().catch(e => console.log("Autoplay blocked"));
+targetVideo.classList.add('active');
+
+const handleEnd = () => {
+targetVideo.classList.remove('active');
+targetVideo.pause();
+vWelcome.classList.add('active');
+vWelcome.play();
+clearTimeout(currentVideoTimer);
+currentVideoTimer = null;
+if (window.onReactionComplete) {
+window.onReactionComplete();
+window.onReactionComplete = null;
+}
+unlockInterface();
+};
+currentVideoTimer = setTimeout(() => {
+if(targetVideo.classList.contains('active')) handleEnd();
+}, 5000);
+targetVideo.onended = handleEnd;
+}
+
+function stopAllVideos() {
+clearTimeout(currentVideoTimer);
+currentVideoTimer = null;
+vSuccess.classList.remove('active');
+vOops.classList.remove('active');
+vSuccess.pause();
+vOops.pause();
+vWelcome.classList.add('active');
+vWelcome.play();
+window.onReactionComplete = null;
+}
+
+// ===== НАВИГАЦИЯ =====
+function showScreen(id) {
+document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+document.getElementById(`screen-${id}`).classList.add('active');
+}
+function goToMenu() {
+stopAllVideos();
+unlockInterface();
+showScreen('menu');
+}
+function openTask(taskId) {
+stopAllVideos();
+unlockInterface();
+if (taskId === 'takeoff') { toIndex = 0; renderTakeOff(); showScreen('takeoff'); }
+else if (taskId === 'arguide') { renderARGuide(); showScreen('arguide'); }
+else if (taskId === 'reading') { showScreen('reading'); }
+else if (taskId === 'truefalse') { tfIndex = 0; renderTF(); showScreen('truefalse'); }
+else if (taskId === 'nowiknow') { showScreen('nowiknow'); }
+}
+
+// ===== БЛОКИРОВКА ИНТЕРФЕЙСА =====
+function lockInterface() {
+isLocked = true;
+document.querySelectorAll('button').forEach(b => b.disabled = true);
+}
+function unlockInterface() {
+isLocked = false;
+document.querySelectorAll('button').forEach(b => {
+if(b.id !== 'to-next-btn') b.disabled = false;
+});
+if(document.getElementById('screen-takeoff').classList.contains('active')) {
+updateTakeOffButtons();
+}
+}
+
+// ===== ЗАДАНИЕ 1: TAKE OFF =====
+function drawClock(timeStr) {
+const [h, m] = timeStr.split(':').map(Number);
+const hourDeg = (h % 12) * 30 + m * 0.5;
+const minDeg = m * 6;
+document.getElementById('to-hand-h').style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+document.getElementById('to-hand-m').style.transform = `translateX(-50%) rotate(${minDeg}deg)`;
+}
+
+function initClockFace() {
+const clock = document.getElementById('to-clock');
+for (let i = 1; i <= 12; i++) {
+const num = document.createElement('div');
+num.className = 'clock-number';
+num.textContent = i;
+const angle = (i * 30 - 90) * (Math.PI / 180);
+const radius = 75;
+const x = 100 + radius * Math.cos(angle);
+const y = 100 + radius * Math.sin(angle);
+num.style.left = `${x}px`;
+num.style.top = `${y}px`;
+num.style.transform = 'translate(-50%, -50%)';
+clock.appendChild(num);
+}
+for (let i = 0; i < 60; i++) {
+const tick = document.createElement('div');
+tick.className = 'clock-tick' + (i % 5 === 0 ? ' major' : '');
+tick.style.transform = `translateX(-50%) rotate(${i * 6}deg)`;
+clock.appendChild(tick);
+}
+}
+
+function renderTakeOff() {
+if (toIndex >= takeOffData.length) {
+playReaction('success');
+window.onReactionComplete = () => showScreen('congrats');
+return;
+}
+const data = takeOffData[toIndex];
+document.getElementById('to-step').textContent = toIndex + 1;
+document.getElementById('to-sentence').textContent = data.text;
+document.getElementById('to-correct-answer').textContent = '';
+drawClock(data.time);
+const checkBtn = document.getElementById('to-check-btn');
+checkBtn.className = 'btn btn-primary';
+checkBtn.textContent = 'Check';
+updateTakeOffButtons();
+}
+
+function updateTakeOffButtons() {
+const checkBtn = document.getElementById('to-check-btn');
+const nextBtn = document.getElementById('to-next-btn');
+if (checkBtn.classList.contains('btn-success')) {
+checkBtn.disabled = true;
+nextBtn.disabled = false;
+} else {
+checkBtn.disabled = false;
+nextBtn.disabled = true;
+}
+}
+
+function checkTakeOff() {
+if (isLocked) return;
+lockInterface();
+const data = takeOffData[toIndex];
+const checkBtn = document.getElementById('to-check-btn');
+const correctAnswerDiv = document.getElementById('to-correct-answer');
+
+// ВСЕГДА показываем правильный ответ и проигрываем Hooray
+correctAnswerDiv.textContent = `Correct answer: ${data.answer}`;
+checkBtn.classList.remove('btn-primary');
+checkBtn.classList.add('btn-success');
+playReaction('success');
+window.onReactionComplete = () => nextTakeOff();
+}
+
+function nextTakeOff() {
+toIndex++;
+if (toIndex < takeOffData.length) {
+renderTakeOff();
+unlockInterface();
+} else {
+playReaction('success');
+window.onReactionComplete = () => showScreen('congrats');
+}
+}
+
+// ===== ЗАДАНИЕ 2: AR-GUIDE =====
+function renderARGuide() {
+const list = document.getElementById('ag-list');
+list.innerHTML = '';
+arGuideData.forEach((item, index) => {
+const div = document.createElement('div');
+div.className = 'statement-item';
+div.innerHTML = `
+<span class="statement-text">${index + 1}. ${item.text}</span>
+<div class="answer-btns">
+<div class="btn-check-icon" onclick="checkAG(${index}, true)" title="True">✓</div>
+<div class="btn-check-icon" onclick="checkAG(${index}, false)" title="False">✕</div>
+</div>
+`;
+list.appendChild(div);
+});
+}
+
+function checkAG(index, userAnswer) {
+if (isLocked) return;
+const item = arGuideData[index];
+const container = document.querySelector(`.statement-item:nth-child(${index + 1})`);
+const btns = container.querySelectorAll('.btn-check-icon');
+const clickedBtn = userAnswer ? btns[0] : btns[1];
+lockInterface();
+if (userAnswer === item.answer) {
+clickedBtn.classList.add('correct-active');
+playReaction('success');
+window.onReactionComplete = () => checkARGuideCompletion();
+} else {
+clickedBtn.classList.add('wrong-active');
+playReaction('oops');
+window.onReactionComplete = () => {
+clickedBtn.classList.remove('wrong-active');
+unlockInterface();
+};
+}
+}
+
+function checkARGuideCompletion() {
+const allCorrect = document.querySelectorAll('.btn-check-icon.correct-active').length === arGuideData.length;
+if (allCorrect) showScreen('congrats');
+else unlockInterface();
+}
+
+// ===== ЗАДАНИЕ 3: READING =====
+function openReadingFullscreen() {
+const rawText = `My name is Danielle Pearson. I live in Wisconsin, USA. My school starts at 8:30. We have a break at 10:30, and most of the students go outside. Every Thursday I have a meeting with my teacher, Miss Blake, to talk about my school work and projects.<br><br>We have lunch every day at 12:15. I usually eat in the school canteen. In the afternoon we usually have Art, PE or Music.<br><br>After school, at 3 o'clock, I go home and play with my little sister. Then I help my mother to cook dinner. After dinner I always do my homework and then I read or watch TV for a while. I go to bed every night at 10 o'clock.`;
+const timeMap = {
+"8:30": "half past eight",
+"10:30": "half past ten",
+"12:15": "quarter past twelve",
+"3 o'clock": "three o'clock",
+"10 o'clock": "ten o'clock"
+};
+let processedHtml = rawText;
+Object.keys(timeMap).forEach(time => {
+const label = timeMap[time];
+const regex = new RegExp(time.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+processedHtml = processedHtml.replace(regex, `<span class="time-chip" onclick="revealTime(this)">${time}<span class="time-label">${label}</span></span>`);
+});
+document.getElementById('rd-text').innerHTML = processedHtml;
+document.getElementById('reading-fullscreen').classList.add('active');
+}
+
+function revealTime(chip) {
+chip.classList.add('revealed');
+}
+
+function closeReadingFullscreen() {
+document.getElementById('reading-fullscreen').classList.remove('active');
+}
+
+// ===== ЗАДАНИЕ 4: TRUE OR FALSE =====
+function renderTF() {
+if (tfIndex >= tfData.length) {
+playReaction('success');
+window.onReactionComplete = () => showScreen('congrats');
+return;
+}
+const q = tfData[tfIndex];
+document.getElementById('tf-count').textContent = tfIndex + 1;
+document.getElementById('tf-question-text').textContent = q.q;
+const btnT = document.getElementById('tf-btn-true');
+const btnF = document.getElementById('tf-btn-false');
+btnT.className = 'btn-tf';
+btnF.className = 'btn-tf';
+btnT.disabled = false;
+btnF.disabled = false;
+}
+
+function answerTF(userAnswer) {
+if (isLocked) return;
+const q = tfData[tfIndex];
+const btnT = document.getElementById('tf-btn-true');
+const btnF = document.getElementById('tf-btn-false');
+const clickedBtn = userAnswer ? btnT : btnF;
+lockInterface();
+if (userAnswer === q.a) {
+clickedBtn.classList.add('selected-correct');
+playReaction('success');
+window.onReactionComplete = () => {
+tfIndex++;
+renderTF();
+unlockInterface();
+};
+} else {
+clickedBtn.classList.add('selected-wrong');
+playReaction('oops');
+window.onReactionComplete = () => {
+clickedBtn.classList.remove('selected-wrong');
+unlockInterface();
+};
+}
+}
+
+// ===== ЗАДАНИЕ 5: NOW I KNOW =====
+function openNowIKnowFullscreen() {
+document.getElementById('nowiknow-fullscreen').classList.add('active');
+}
+
+function closeNowIKnowFullscreen() {
+document.getElementById('nowiknow-fullscreen').classList.remove('active');
+}
+
+function finishLesson() {
+closeNowIKnowFullscreen();
+playReaction('success');
+window.onReactionComplete = () => showScreen('congrats');
+}
+
+// ===== RESTART =====
+function restartGame() {
+stopAllVideos();
+isLocked = false;
+toIndex = 0;
+tfIndex = 0;
+document.querySelectorAll('.btn-check-icon').forEach(b => b.classList.remove('correct-active', 'wrong-active'));
+document.querySelectorAll('.btn-tf').forEach(b => b.classList.remove('selected-correct', 'selected-wrong'));
+document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('revealed'));
+const checkBtn = document.getElementById('to-check-btn');
+if(checkBtn) { checkBtn.className = 'btn btn-primary'; checkBtn.disabled = false; }
+const nextBtn = document.getElementById('to-next-btn');
+if(nextBtn) nextBtn.disabled = true;
+document.getElementById('to-correct-answer').textContent = '';
+showScreen('menu');
+}
+
+window.onload = () => {
+initClockFace();
+vWelcome.play().catch(e => console.log("Video autoplay prevented"));
+};
+</script>
+</body>
+</html>
